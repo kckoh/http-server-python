@@ -11,10 +11,23 @@ def main():
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
     conn, addr = server_socket.accept() # wait for client
     # send HTTP/1.1 200 OK\r\n\r\n
-    conn.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
+    while True:
+        data = conn.recv(1024)
+        if not data:
+            break
+        lists = data.split(b"\r\n")[0].split(b" ")
+        if lists[1] == b"/":
+            conn.send(b"HTTP/1.1 200 OK\r\n\r\n")
+        else:
+            conn.send(b"HTTP/1.1 404 Not Found\r\n\r\n")
+        for i in lists:
+            print(i.decode("utf-8"))
+    conn.close()
+        # print(data.split(b"\r\n").decode("utf-8"))
+    # conn.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
         
 
-    # server_socket.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
+
 
 
 if __name__ == "__main__":
