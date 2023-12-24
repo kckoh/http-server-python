@@ -9,13 +9,24 @@ def handle_client(client_socket):
     if not data:
         pass
     lists = data.split(b"\r\n")[0].split(b" ")
+    method = ""
     path = ""
     user_agent = ""
+    contentBody = data.split(b"\r\n\r\n")[1]
+    
     for i in data.split(b"\r\n"):
         if b"User-Agent" in i:
             user_agent = i.split(b"User-Agent: ")[1]
         if b"GET" in i:
             path = i.split(b"GET ")[1].split(b" HTTP")[0]
+            method = i.split(b" ")[0]
+        if b"POST" in i:
+            path = i.split(b"POST ")[1].split(b" HTTP")[0]
+            method = i.split(b" ")[0]
+    
+    
+        
+        
 
     if path == b"/":
         client_socket.send(b"HTTP/1.1 200 OK\r\n\r\n")
@@ -33,7 +44,7 @@ def handle_client(client_socket):
         client_socket.send(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n" + content_leng)
         client_socket.send(content)
     
-    elif b"/files" in path:
+    elif b"/files" in path and method == b"GET":
         file = path.split(b"/files/")[1]
         # Create the argument parser
         parser = argparse.ArgumentParser(description="Process a directory path.")
@@ -53,6 +64,7 @@ def handle_client(client_socket):
             print(f"The directory '{directory + file.decode()}'  exist.")
         else:
             print(f"The directory '{directory}' does not exist.")
+        
 
         if os.path.isfile(filePath):
             with open(filePath, "rb") as f:
@@ -63,6 +75,38 @@ def handle_client(client_socket):
         else:
             client_socket.send(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
+    elif b"/files" in path and method == b"POST":
+        file = path.split(b"/files/")[1]
+        # Create the argument parser
+        parser = argparse.ArgumentParser(description="Process a directory path.")
+
+        # Add the --directory argument
+        parser.add_argument('--directory', type=str, required=False,
+                            help='the path to the directory')
+
+        # Parse arguments
+        args = parser.parse_args()
+
+        # Access the directory argument
+        directory = args.directory + "/"
+        filePath = directory + file.decode()   
+        print("content body ======" +contentBody.decode())
+
+       
+        with open(filePath, "wb") as f:
+            f.write(contentBody)
+            content_leng = f"Content-Length: {len(contentBody)}\r\n\r\n".encode()
+            client_socket.send(b"HTTP/1.1 201 OK\r\nContent-Type: application/octet-stream\r\n" + content_leng)
+            client_socket.send(contentBody)
+        # if os.path.isfile(filePath):
+        #     # read the data from the client
+
+        #     content = f.read()
+        #     content_leng = f"Content-Length: {len(content)}\r\n\r\n".encode()
+        #     client_socket.send(b"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n" + content_leng)
+        #     client_socket.send(content)
+        # else:
+        #     client_socket.send(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
     else:
         client_socket.send(b"HTTP/1.1 404 Not Found\r\n\r\n")
